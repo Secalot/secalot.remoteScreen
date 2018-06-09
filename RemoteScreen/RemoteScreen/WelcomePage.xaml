@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://xamarin.com/schemas/2014/forms"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="RemoteScreen.WelcomePage"
+             Title="Secalot RemoteScreen">
+    <ContentPage.Content>
+        <StackLayout Padding="10, 10, 10, 50">
+            <StackLayout VerticalOptions="CenterAndExpand" HorizontalOptions="CenterAndExpand">
+                <Label XAlign="Center" Text="Welcome to Secalot RemoteScreen&#xA;&#xA;" FontAttributes="Bold" FontSize="Medium"/>
+                <Label Text="Please bind your Secalot Control Panel with this app.&#xA;To do that, open Secalot Control Panel on your computer, navigate to the &quot;Remote screen&quot; tab
+and press the &quot;Bind mobile phone&quot; button. A QR code will be displayed. Press the &quot;Bind Secalot Control Panel&quot; button below
+and scan the QR code."/>
+            </StackLayout>
+            <Button Text="Bind Secalot Control Panel" Clicked="OnBindButtonClicked"/>
+        </StackLayout>
+    </ContentPage.Content>
+</ContentPage>
