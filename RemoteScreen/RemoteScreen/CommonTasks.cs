@@ -81,30 +81,42 @@ namespace RemoteScreen
             return HexAsBytes;
         }
 
-        public static UInt32 MakeLong(UInt16 high, UInt16 low)
+        public static UInt32 MakeUint32(byte[] array, int offset)
         {
-            return ((UInt32)low & 0xFFFF) | (((UInt32)high & 0xFFFF) << 16);
+            array = array.Skip(offset).Take(4).ToArray();
+
+            if (BitConverter.IsLittleEndian)
+            {
+                Array.Reverse(array, 0, 4);
+            }
+
+            return BitConverter.ToUInt32(array, 0);
         }
-        public static UInt16 MakeWord(byte high, byte low)
+
+        public static UInt16 MakeUint16(byte[] array, int offset)
         {
-            return (UInt16)(((UInt32)low & 0xFF) | ((UInt32)high & 0xFF) << 8);
+            array = array.Skip(offset).Take(2).ToArray();
+
+            if (BitConverter.IsLittleEndian)
+            {
+                Array.Reverse(array, 0, 2);
+            }
+
+            return BitConverter.ToUInt16(array, 0);
         }
-        public static UInt16 LoWord(UInt32 nValue)
+
+        public static Int64 MakeInt64(byte[] array, int offset)
         {
-            return (UInt16)(nValue & 0xFFFF);
+            array = array.Skip(offset).Take(8).ToArray();
+
+            if (BitConverter.IsLittleEndian)
+            {
+                Array.Reverse(array, 0, 8);
+            }
+
+            return BitConverter.ToInt64(array, 0);
         }
-        public static UInt16 HiWord(UInt32 nValue)
-        {
-            return (UInt16)(nValue >> 16);
-        }
-        public static Byte LoByte(UInt16 nValue)
-        {
-            return (Byte)(nValue & 0xFF);
-        }
-        public static Byte HiByte(UInt16 nValue)
-        {
-            return (Byte)(nValue >> 8);
-        }
+
     }
 
     class MyPskTlsClient: PskTlsClient
@@ -185,7 +197,15 @@ namespace RemoteScreen
         public bool transactionTooBigToDisplay { get; set; }
         public ushort currentOffset { get; set; }
         public byte[] address { get; set; }
-        public ulong remainingTime { get; set; }
+        public uint remainingTime { get; set; }
+    }
+
+    public class BitcoinTransactionInfo
+    {
+        public bool transactionTooBigToDisplay { get; set; }
+        public ushort currentOffset { get; set; }
+        public uint numberOfInputs { get; set; }
+        public uint remainingTime { get; set; }
     }
 
     class CommonTasks
@@ -620,9 +640,9 @@ namespace RemoteScreen
 
             EthereumTransactionInfo transactionInfo = new EthereumTransactionInfo();
 
-            transactionInfo.type = Helper.MakeWord(response[0], response[1]);
+            transactionInfo.type = Helper.MakeUint16(response, 0);
 
-            if(response[2] != 0x00)
+            if (response[2] != 0x00)
             {
                 transactionInfo.transactionTooBigToDisplay = true;
             }
@@ -631,12 +651,10 @@ namespace RemoteScreen
                 transactionInfo.transactionTooBigToDisplay = false;
             }
 
-            transactionInfo.currentOffset = Helper.MakeWord(response[3], response[4]);
+            transactionInfo.currentOffset = Helper.MakeUint16(response, 3);
             transactionInfo.address = new byte[20];
             Array.Copy(response, 5, transactionInfo.address, 0, 20);
-            transactionInfo.remainingTime = Helper.MakeLong(Helper.MakeWord(response[25], response[26]),
-                    Helper.MakeWord(response[27], response[28]));
-
+            transactionInfo.remainingTime = Helper.MakeUint32(response, 25);
             return transactionInfo;
         }
 
@@ -646,7 +664,7 @@ namespace RemoteScreen
             byte[] header = { 0x80, 0xE0, 0x01, 0x00 };
             byte[] response;
             uint chunksToRead;
-            uint chunkSize = 4;
+            uint chunkSize = 128;
             uint remainingLength = length;
             List<byte> transaction = new List<byte>();
 
@@ -679,5 +697,99 @@ namespace RemoteScreen
 
             return transaction.ToArray();
         }
+
+        public async static Task SelectBtcApp(ConnectionState connectionState, CancellationToken token, TlsClientProtocol tls)
+        {
+            byte[] apdu = { 0x00, 0xA4, 0x04, 0x00, 0x09, 0x42, 0x54, 0x43, 0x41, 0x50, 0x50, 0x4C, 0x45, 0x54 };
+
+            await SendWrappedAPDU(apdu, 0, connectionState, token, tls);
+        }
+
+        public async static Task<BitcoinTransactionInfo> GetBtcTransactionDetails(ConnectionState connectionState, CancellationToken token, TlsClientProtocol tls)
+        {
+            byte[] apdu = { 0xE0, 0xE0, 0x00, 0x00 };
+
+            byte[] response = await SendWrappedAPDU(apdu, 11, connectionState, token, tls);
+
+            BitcoinTransactionInfo transactionInfo = new BitcoinTransactionInfo();
+
+            if (response[0] != 0x00)
+            {
+                transactionInfo.transactionTooBigToDisplay = true;
+            }
+            else
+            {
+                transactionInfo.transactionTooBigToDisplay = false;
+            }
+
+            transactionInfo.currentOffset = Helper.MakeUint16(response, 1);
+            transactionInfo.numberOfInputs = Helper.MakeUint32(response, 3);
+            transactionInfo.remainingTime = Helper.MakeUint32(response, 7);
+
+            return transactionInfo;
+        }
+
+        public async static Task<byte[]> ReadBtcTransaction(uint length, ConnectionState connectionState, CancellationToken token, TlsClientProtocol tls)
+        {
+            List<byte> apdu = new List<byte>();
+            byte[] header = { 0xE0, 0xE0, 0x01, 0x00 };
+            byte[] response;
+            uint chunksToRead;
+            uint chunkSize = 128;
+            uint remainingLength = length;
+            List<byte> transaction = new List<byte>();
+
+            chunksToRead = length / chunkSize;
+
+            if ((length % chunkSize) != 0)
+            {
+                chunksToRead++;
+            }
+
+            for (int i = 0; i < chunksToRead; i++)
+            {
+                apdu.Clear();
+                apdu.AddRange(header);
+                apdu.Add(0x02);
+                apdu.Add((byte)(i >> 8));
+                apdu.Add((byte)i);
+
+                response = await SendWrappedAPDU(apdu.ToArray(), chunkSize, connectionState, token, tls);
+
+                if (remainingLength < chunkSize)
+                {
+                    response = response.Take((int)remainingLength).ToArray();
+                }
+
+                transaction.AddRange(response);
+
+                remainingLength -= chunkSize;
+            }
+
+            return transaction.ToArray();
+        }
+
+        public async static Task<Int64[]> GetBtcInputAmounts(uint numberOfInputs, ConnectionState connectionState, CancellationToken token, TlsClientProtocol tls)
+        {
+            List<byte> apdu = new List<byte>();
+            byte[] header = { 0xE0, 0xE0, 0x02, 0x00 };
+            byte[] response;
+            Int64[] amounts;
+
+            amounts = new Int64[numberOfInputs];
+
+            apdu.Clear();
+            apdu.AddRange(header);
+
+            response = await SendWrappedAPDU(apdu.ToArray(), (numberOfInputs*8), connectionState, token, tls);
+
+            for (int j = 0; j < numberOfInputs; j++)
+            {
+                    amounts[j] = Helper.MakeInt64(response, j * 8);
+            }
+
+            return amounts;
+        }
+
     }
 }

@@ -17,6 +17,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
+    <Compile Include="$(MSBuildThisFileDirectory)BtcParser.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)CommonTasks.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)EthParser.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Settings.cs" />
