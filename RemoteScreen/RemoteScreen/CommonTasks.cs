@@ -62,9 +62,9 @@ namespace RemoteScreen
         }
     }
 
-    class Helper
+    static class Helper
     {
-        public static byte[] ConvertHexStringToByteArray(string hexString)
+        public static byte[] ConvertHexStringToByteArray(this string hexString)
         {
             if (hexString.Length % 2 != 0)
             {
@@ -169,13 +169,26 @@ namespace RemoteScreen
     {
         public TlsCredentials GetClientCredentials(CertificateRequest certificateRequest)
         {
-            // return client certificate
             return null;
         }
 
         public void NotifyServerCertificate(Certificate serverCertificate)
         {
-            // validate server certificate
+            string referencePublicKey;
+            var certificate = serverCertificate.GetCertificateAt(0);
+
+            byte[] publicKey = certificate.SubjectPublicKeyInfo.PublicKeyData.GetEncoded();
+
+            publicKey = publicKey.Skip(4).ToArray();
+
+            string publicKeyString = BitConverter.ToString(publicKey).Replace("-", "").ToLower();
+
+            Settings.GetPublicKey(out referencePublicKey);
+
+            if(referencePublicKey != publicKeyString)
+            {
+                throw new Exception("Invalid server certificate.");
+            }
         }
     }
 
@@ -326,8 +339,8 @@ namespace RemoteScreen
         public async static Task EstablishPSKChannelAsync(ConnectionState connectionState, CancellationToken token)
         {
             string keyAsString;
-            Settings.GetKey(out keyAsString);
-            byte[] key = Helper.ConvertHexStringToByteArray(keyAsString);
+            Settings.GetPskKey(out keyAsString);
+            byte[] key = keyAsString.ConvertHexStringToByteArray();
 
             var identity = new BasicTlsPskIdentity(Encoding.ASCII.GetBytes("RemoteScreen"), key);
 

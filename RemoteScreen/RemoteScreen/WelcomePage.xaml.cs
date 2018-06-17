@@ -29,7 +29,15 @@ namespace RemoteScreen
                 }
                 else
                 {
+                    string publicKey;
+
                     Settings.BindControlPanel(qrCode);
+
+                    Settings.GetPublicKey(out publicKey);
+
+                    string fingerprint = Settings.PublicKeyToFingerprint(publicKey);
+
+                    await DisplayAlert("Device binded", "Device with fingerprint " + fingerprint + " is successfully binded.", "OK");
 
                     Navigation.InsertPageBefore(new RemoteScreenPage(), this);
                     await Navigation.PopAsync(true);
