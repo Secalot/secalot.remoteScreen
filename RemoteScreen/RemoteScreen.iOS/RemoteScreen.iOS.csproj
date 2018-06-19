@@ -131,8 +131,8 @@
     <PackageReference Include="Portable.BouncyCastle">
       <Version>1.8.2</Version>
     </PackageReference>
-    <PackageReference Include="QBitNinja.Client">
-      <Version>1.0.3.47</Version>
+    <PackageReference Include="Rg.Plugins.Popup">
+      <Version>1.0.4</Version>
     </PackageReference>
     <PackageReference Include="Xam.Plugin.HtmlLabel">
       <Version>2.2.0</Version>

@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 using Xamarin.Forms;
 using Xamarin.Forms.Xaml;
 
+using Rg.Plugins.Popup.Extensions;
+using Rg.Plugins.Popup.Services;
+
 namespace RemoteScreen
 {
     [XamlCompilation(XamlCompilationOptions.Compile)]
@@ -15,6 +18,11 @@ namespace RemoteScreen
         public WelcomePage()
         {
             InitializeComponent();
+        }
+
+        async void OnHelpButtonClicked(object sender, EventArgs args)
+        {
+            await PopupNavigation.PushAsync(new HelpPopup());
         }
 
         async void OnBindButtonClicked(object sender, EventArgs args)

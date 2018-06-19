@@ -13,6 +13,14 @@
 
     <ContentPage.Content>
         <StackLayout Padding="10, 10, 10, 50">
+            <StackLayout Orientation="Horizontal"  HorizontalOptions="Center">
+                <StackLayout Orientation="Vertical"  HorizontalOptions="Start">
+                    <Image Source="greenCircle.png" HeightRequest="25" />
+                </StackLayout>
+                <StackLayout Orientation="Vertical"  HorizontalOptions="Start">
+                    <Label Text="Control Panel found" VerticalTextAlignment="Center" HeightRequest="25"/>
+                </StackLayout>
+            </StackLayout>
             <htmlLabel:HtmlLabel Text="{Binding PageText}"
                 VerticalOptions="CenterAndExpand" 
                 HorizontalOptions="CenterAndExpand" />

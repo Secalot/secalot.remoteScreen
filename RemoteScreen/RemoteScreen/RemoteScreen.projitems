@@ -12,6 +12,7 @@
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)App.xaml" />
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)WelcomePage.xaml" />
     <EmbeddedResource Include="$(MSBuildThisFileDirectory)RemoteScreenPage.xaml" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)HelpPopup.xaml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)App.xaml.cs">
@@ -26,6 +27,9 @@
     </Compile>
     <Compile Include="$(MSBuildThisFileDirectory)RemoteScreenPage.xaml.cs">
       <DependentUpon>RemoteScreenPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="$(MSBuildThisFileDirectory)HelpPopup.xaml.cs">
+      <DependentUpon>HelpPopup.xaml</DependentUpon>
     </Compile>
   </ItemGroup>
 </Project>
