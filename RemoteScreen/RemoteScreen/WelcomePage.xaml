@@ -25,7 +25,7 @@
                         <Button Text="Help" Clicked="OnHelpButtonClicked"/>
                     </StackLayout>
                     <StackLayout Orientation="Vertical"  HorizontalOptions="FillAndExpand">
-                        <Button Text="Bind Secalot Control Panel" Clicked="OnBindButtonClicked"/>
+                        <Button Text="Bind Secalot Control Panel" Clicked="OnBindButtonClicked" />
                     </StackLayout>
                 </StackLayout>
 

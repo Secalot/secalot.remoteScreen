@@ -34,33 +34,44 @@ namespace RemoteScreen
         }
     }
 
-    sealed class DisposableScope : IDisposable
+    public class InvalidServerCertificateException : Exception
     {
-        private readonly Action _closeScopeAction;
-        public DisposableScope(Action closeScopeAction)
+        public InvalidServerCertificateException()
         {
-            _closeScopeAction = closeScopeAction;
-        }
-        public void Dispose()
-        {
-            _closeScopeAction();
         }
     }
 
-    static class ConnectionTimeout
+    public class ServerConnectionFailedException : Exception
     {
-        public static IDisposable CreateTimeoutScope(this IDisposable disposable, CancellationTokenSource cancellationTokenSource)
+        public ServerConnectionFailedException()
         {
-            var cancellationTokenRegistration = cancellationTokenSource.Token.Register(disposable.Dispose);
-            return new DisposableScope(
-                () =>
-                {
-                    cancellationTokenRegistration.Dispose();
-                    cancellationTokenSource.Dispose();
-                    disposable.Dispose();
-                });
         }
     }
+
+    public class Non9000SwException : RemoteProtocolException
+    {
+        public Non9000SwException()
+        {
+        }
+
+        public Non9000SwException(string message)
+            : base(message)
+        {
+        }
+
+        public Non9000SwException(string message, Exception inner)
+            : base(message, inner)
+        {
+        }
+    }
+
+    public class TransactionNotActiveException : Exception
+    {
+        public TransactionNotActiveException()
+        {
+        }
+    }
+
 
     static class Helper
     {
@@ -187,7 +198,7 @@ namespace RemoteScreen
 
             if(referencePublicKey != publicKeyString)
             {
-                throw new Exception("Invalid server certificate.");
+                throw new InvalidServerCertificateException();
             }
         }
     }
@@ -297,43 +308,37 @@ namespace RemoteScreen
 
         public class ConnectionState
         {
-            public bool connectionEstablished;
             public TcpClient client;
             public TlsClientProtocol pskClientProtocol;
 
             public ConnectionState()
             {
-                connectionEstablished = false;
                 client = null;
                 pskClientProtocol = null;
             }
         }
 
-        public async static Task<ConnectionState> ConnectToServerAsync(ServerInfo serverInfo, TimeSpan timeout)
+        public async static Task ConnectToServerAsync(ServerInfo serverInfo, ConnectionState connectionState, TimeSpan timeout)
         {
-            ConnectionState connectionState = new ConnectionState();
+            var cancellationCompletionSource = new TaskCompletionSource<bool>();
 
-            connectionState.client = new TcpClient();
+            using (var cts = new CancellationTokenSource(timeout))
+            {
+                var task = connectionState.client.ConnectAsync(serverInfo.ip, serverInfo.port);
 
-            CancellationTokenSource cts = new CancellationTokenSource();
-
-            connectionState.client.CreateTimeoutScope(cts);
-            await connectionState.client.ConnectAsync(serverInfo.ip, serverInfo.port);
-            cts.Token.Register(() => { });
-
-            connectionState.connectionEstablished = true;
-
-            return connectionState;
+                using (cts.Token.Register(() => cancellationCompletionSource.TrySetResult(true)))
+                {
+                    if (task != await Task.WhenAny(task, cancellationCompletionSource.Task))
+                    {
+                        throw new ServerConnectionFailedException();
+                    }
+                }
+            }
         }
 
         public static void DisconnectFromServer(ref ConnectionState connectionState)
         {
-            if (connectionState.connectionEstablished == true)
-            {
-                connectionState.client.Close();
-            }
-
-            connectionState.connectionEstablished = false;
+            connectionState.client.Close();
         }
 
         public async static Task EstablishPSKChannelAsync(ConnectionState connectionState, CancellationToken token)
@@ -509,6 +514,18 @@ namespace RemoteScreen
             }
         }
 
+        private async static Task SendSslResetApduAsync(ConnectionState connectionState, CancellationToken token)
+        {
+            byte[] selectSSLModuleAPDU = { 0x80, 0x20, 0x00, 0x00 };
+
+            byte[] response = await SendApduAsync(selectSSLModuleAPDU, connectionState, token);
+
+            if ((response[response.Length - 1] != 0x00) || (response[response.Length - 2] != 0x90))
+            {
+                throw new RemoteProtocolException("Failed to select SSL module");
+            }
+        }
+
         private async static Task<byte[]> SendHandshakeApduAsync(byte[] handshakeData, ConnectionState connectionState, CancellationToken token)
         {
             List<byte> apdu = new List<byte>();
@@ -548,6 +565,8 @@ namespace RemoteScreen
             pkiClientProtocol.Connect(pkiClient);
 
             await SendSelectSslModuleApduAsync(connectionState, token);
+
+            await SendSslResetApduAsync(connectionState, token);
 
             while (pkiClient.handshakeFinished != true)
             {
@@ -627,7 +646,7 @@ namespace RemoteScreen
 
             if ((response[response.Length - 1] != 0x00) || (response[response.Length - 2] != 0x90))
             {
-                throw new RemoteProtocolException("Invalid APDU response");
+                throw new Non9000SwException("Invalid APDU response");
             }
 
             if( (response.Length) != expectedLength+2)
@@ -648,8 +667,16 @@ namespace RemoteScreen
         public async static Task<EthereumTransactionInfo> GetEthTransactionDetails(ConnectionState connectionState, CancellationToken token, TlsClientProtocol tls)
         {
             byte[] apdu = { 0x80, 0xE0, 0x00, 0x00 };
+            byte[] response;
 
-            byte[] response = await SendWrappedAPDU(apdu, 29, connectionState, token, tls);
+            try
+            {
+                response = await SendWrappedAPDU(apdu, 29, connectionState, token, tls);
+            }
+            catch (Non9000SwException)
+            {
+                throw new TransactionNotActiveException();
+            }
 
             EthereumTransactionInfo transactionInfo = new EthereumTransactionInfo();
 
@@ -721,8 +748,16 @@ namespace RemoteScreen
         public async static Task<BitcoinTransactionInfo> GetBtcTransactionDetails(ConnectionState connectionState, CancellationToken token, TlsClientProtocol tls)
         {
             byte[] apdu = { 0xE0, 0xE0, 0x00, 0x00 };
+            byte[] response;
 
-            byte[] response = await SendWrappedAPDU(apdu, 11, connectionState, token, tls);
+            try
+            {
+               response = await SendWrappedAPDU(apdu, 11, connectionState, token, tls);
+            }
+            catch(Non9000SwException)
+            {
+                throw new TransactionNotActiveException();
+            }
 
             BitcoinTransactionInfo transactionInfo = new BitcoinTransactionInfo();
 

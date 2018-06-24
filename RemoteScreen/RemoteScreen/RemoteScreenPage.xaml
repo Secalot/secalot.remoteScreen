@@ -6,25 +6,40 @@
              xmlns:htmlLabel="clr-namespace:Plugin.HtmlLabel;assembly=Plugin.HtmlLabel"
              Title="Secalot RemoteScreen"
              NavigationPage.HasBackButton="False">
+    
 
     <ContentPage.ToolbarItems>
         <ToolbarItem Name="Unbind" Order="Primary" Text="Unbind" Priority="0" Activated="OnUnbindMenuItemClicked"/>
     </ContentPage.ToolbarItems>
 
     <ContentPage.Content>
-        <StackLayout Padding="10, 10, 10, 50">
-            <StackLayout Orientation="Horizontal"  HorizontalOptions="Center">
-                <StackLayout Orientation="Vertical"  HorizontalOptions="Start">
-                    <Image Source="greenCircle.png" HeightRequest="25" />
+
+        <RelativeLayout>
+            <Image
+                Aspect="AspectFill"
+                Source="background.png"
+                RelativeLayout.WidthConstraint = "{ConstraintExpression Type=RelativeToParent, Property=Width}"
+                RelativeLayout.HeightConstraint = "{ConstraintExpression Type=RelativeToParent, Property=Height}">
+            </Image>
+
+            <StackLayout Padding="10, 10, 10, 50" 
+                RelativeLayout.WidthConstraint= "{ConstraintExpression Type=RelativeToParent, Property=Width}"
+                RelativeLayout.HeightConstraint= "{ConstraintExpression Type=RelativeToParent, Property=Height}">
+
+                <StackLayout Orientation="Horizontal"  HorizontalOptions="Center" Padding="0, 10, 0, 0">
+                    <StackLayout Orientation="Vertical"  HorizontalOptions="Start">
+                        <Image Source="{Binding ServerStatusImage}" HeightRequest="20" />
+                    </StackLayout>
+                    <StackLayout Orientation="Vertical"  HorizontalOptions="Start">
+                        <Label Text="{Binding ServerStatus}" VerticalTextAlignment="Center" HeightRequest="20"/>
+                    </StackLayout>
                 </StackLayout>
-                <StackLayout Orientation="Vertical"  HorizontalOptions="Start">
-                    <Label Text="Control Panel found" VerticalTextAlignment="Center" HeightRequest="25"/>
-                </StackLayout>
+                <htmlLabel:HtmlLabel Text="" VerticalOptions="CenterAndExpand" HorizontalOptions="CenterAndExpand" />
+                <Button Text="Get Transaction Details" Clicked="OnGetTransactionButtonClicked" IsEnabled="{Binding TransactionButtonEnabled}"/>
+
             </StackLayout>
-            <htmlLabel:HtmlLabel Text="{Binding PageText}"
-                VerticalOptions="CenterAndExpand" 
-                HorizontalOptions="CenterAndExpand" />
-            <Button Text="Get Transaction Details" Clicked="OnGetTransactionButtonClicked"/>
-        </StackLayout>
+
+        </RelativeLayout>
+
     </ContentPage.Content>
 </ContentPage>

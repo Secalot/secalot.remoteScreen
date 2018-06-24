@@ -10,6 +10,8 @@ using Xamarin.Forms;
 using Xamarin.Forms.Xaml;
 
 using System.Diagnostics;
+using System.Net.Sockets;
+using Rg.Plugins.Popup.Services;
 
 namespace RemoteScreen
 {
@@ -17,95 +19,136 @@ namespace RemoteScreen
     [XamlCompilation(XamlCompilationOptions.Compile)]
 	public partial class RemoteScreenPage : ContentPage
     {
-        string pageText;
+        string serverStatus;
 
-        public string PageText
+        public string ServerStatus
         {
-            get { return pageText; }
+            get { return serverStatus; }
             set
             {
-                if (pageText != value)
+                if (serverStatus != value)
                 {
-                    pageText = value;
+                    serverStatus = value;
                     OnPropertyChanged();
                 }
-
             }
         }
 
+        string serverStatusImage;
 
-        CommonTasks.ConnectionState connectionState;
+        public string ServerStatusImage
+        {
+            get { return serverStatusImage; }
+            set
+            {
+                if (serverStatusImage != value)
+                {
+                    serverStatusImage = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
 
-        CancellationTokenSource connectionTokenSource;
-        CancellationTokenSource commandTokenSource;
+        bool transactionButtonEnabled;
+
+        public bool TransactionButtonEnabled
+        {
+            get { return transactionButtonEnabled; }
+            set
+            {
+                if (transactionButtonEnabled != value)
+                {
+                    transactionButtonEnabled = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        CancellationTokenSource findServerTokenSource;
+        CancellationTokenSource getTransactionTokenSource;
+
+        CommonTasks.ServerInfo serverInfo;
+        
 
         public RemoteScreenPage ()
 		{
             BindingContext = this;
 
-            connectionTokenSource = new CancellationTokenSource();
-            commandTokenSource = new CancellationTokenSource();
+            ServerStatus = "Searching for Secalot Control Panel";
+            ServerStatusImage = "yellowCircle.png";
+            TransactionButtonEnabled = false;
+
+            findServerTokenSource = new CancellationTokenSource();
+            getTransactionTokenSource = new CancellationTokenSource();
 
             InitializeComponent ();
         }
 
-        private async Task ConnectToServer(CancellationToken token)
+        private async Task FindServer(CancellationToken token)
         {
             CommonTasks.ServerInfo serverInfo;
 
-            while (true)
+            try
             {
-                try
+
+                while (true)
                 {
-                    PageText = "Finding server...";
-
-                    serverInfo = await CommonTasks.FindServerAsync(TimeSpan.FromDays(1), token);
-
-                    PageText = "Connecting to server...";
-
-                    connectionState = await CommonTasks.ConnectToServerAsync(serverInfo, TimeSpan.FromSeconds(1));
-
-                    if (token.IsCancellationRequested)
+                    try
                     {
-                        token.ThrowIfCancellationRequested();
+                        serverInfo = await CommonTasks.FindServerAsync(TimeSpan.FromSeconds(1), token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        throw;
+                    }
+                    catch (Exception e)
+                    {
+                        ServerStatus = "Searching for Secalot Control Panel";
+                        ServerStatusImage = "yellowCircle.png";
+                        TransactionButtonEnabled = false;
+
+                        await Task.Delay(5000, token);
+
+                        continue;
                     }
 
-                    PageText = "Authenticating...";
+                    ServerStatus = "Secalot Control Panel found";
+                    ServerStatusImage = "greenCircle.png";
+                    TransactionButtonEnabled = true;
+                    this.serverInfo = serverInfo;
 
-                    await CommonTasks.EstablishPSKChannelAsync(connectionState, token);
-
-                    PageText = "Connected";
-
-                    break;
+                    await Task.Delay(5000, token);
                 }
-                catch (OperationCanceledException)
-                {
-                    return;
-                }
-                catch (Exception e)
-                {
-                    PageText += " Failed.";
-                    await Task.Delay(3000);
-                    continue;
-                }
+            }
+            catch (TaskCanceledException)
+            {
+                return;
             }
         }
 
-        protected async override void OnAppearing()
+        protected override void OnAppearing()
         {
-            connectionTokenSource = new CancellationTokenSource();
+            try
+            {
+                findServerTokenSource = new CancellationTokenSource();
+                getTransactionTokenSource = new CancellationTokenSource();
 
-            await ConnectToServer(connectionTokenSource.Token);
+                Task task = Task.Factory.StartNew(() =>
+                {
+                    FindServer(findServerTokenSource.Token);
+                });
+            }
+            catch (Exception)
+            {
+            }
         }
 
         protected override void OnDisappearing()
         {
             try
             {
-                connectionTokenSource.Cancel();
-                commandTokenSource.Cancel();
-
-                CommonTasks.DisconnectFromServer(ref connectionState);
+                findServerTokenSource.Cancel();
+                getTransactionTokenSource.Cancel();
             }
             catch (Exception)
             {
@@ -114,71 +157,87 @@ namespace RemoteScreen
 
         async void OnGetTransactionButtonClicked(object sender, EventArgs args)
         {
-
             try
             {
-                commandTokenSource = new CancellationTokenSource();
+                CancellationTokenSource timeoutCTS = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
-                var tls = await CommonTasks.PerformSSLHadshakeWithToken(connectionState, commandTokenSource.Token);
+                using (CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCTS.Token, getTransactionTokenSource.Token))
+                {
+                    CommonTasks.ConnectionState connectionState = new CommonTasks.ConnectionState();
 
-                await CommonTasks.SelectBtcApp(connectionState, commandTokenSource.Token, tls);
+                    using (connectionState.client = new TcpClient())
+                    {
+                        await CommonTasks.ConnectToServerAsync(serverInfo, connectionState, TimeSpan.FromSeconds(1));
 
-                var transactionDetails = await CommonTasks.GetBtcTransactionDetails(connectionState, commandTokenSource.Token, tls);
-                var inputAmounts = await CommonTasks.GetBtcInputAmounts(transactionDetails.numberOfInputs, connectionState, commandTokenSource.Token, tls);
-                var transaction = await CommonTasks.ReadBtcTransaction(transactionDetails.currentOffset, connectionState, commandTokenSource.Token, tls);
+                        await CommonTasks.EstablishPSKChannelAsync(connectionState, linkedCts.Token);
 
-                string parsedTransaction = BtcParser.ParseBitcoinTransaction(transactionDetails, transaction, inputAmounts);
+                        var tls = await CommonTasks.PerformSSLHadshakeWithToken(connectionState, linkedCts.Token);
 
-                PageText = parsedTransaction;
+                        try
+                        {
+                            await CommonTasks.SelectBtcApp(connectionState, linkedCts.Token, tls);
 
-                //var transaction = await CommonTasks.ReadEthTransaction(transactionDetails.currentOffset,
-                //    connectionState, commandTokenSource.Token, tls);
+                            var transactionDetails = await CommonTasks.GetBtcTransactionDetails(connectionState, linkedCts.Token, tls);
+                            var inputAmounts = await CommonTasks.GetBtcInputAmounts(transactionDetails.numberOfInputs, connectionState, linkedCts.Token, tls);
+                            var transaction = await CommonTasks.ReadBtcTransaction(transactionDetails.currentOffset, connectionState, linkedCts.Token, tls);
 
+                            var parsedTransaction = BtcParser.ParseBitcoinTransaction(transactionDetails, transaction, inputAmounts);
 
+                            await PopupNavigation.PushAsync(new TransactionPopup(parsedTransaction));
+                        }
+                        catch (TransactionNotActiveException)
+                        {
+                            try
+                            {
+                                await CommonTasks.SelectEthApp(connectionState, linkedCts.Token, tls);
 
-                //await CommonTasks.SelectEthApp(connectionState, commandTokenSource.Token, tls);
+                                var transactionDetails = await CommonTasks.GetEthTransactionDetails(connectionState, linkedCts.Token, tls);
 
-                //var transactionDetails = await CommonTasks.GetEthTransactionDetails(connectionState, commandTokenSource.Token, tls);
+                                var transaction = await CommonTasks.ReadEthTransaction(transactionDetails.currentOffset, connectionState, linkedCts.Token, tls);
 
-                //var transaction = await CommonTasks.ReadEthTransaction(transactionDetails.currentOffset,
-                //    connectionState, commandTokenSource.Token, tls);
+                                string parsedTransaction = EthParser.ParseEthereumTransaction(transactionDetails, transaction);
 
-                //string parsedTransaction = EthParser.ParseEthereumTransaction(transactionDetails, transaction);
-
-                //PageText = parsedTransaction;
-
-
-                //Transaction tx = new Transaction("01000000010b44f2a1ed462807bded644b03cc08599dd2b30cb5a82cdba6a19156789ce753010000005701ff4c53ff0488b21e03d28401a280000000327d7c137044fa03b87e7090b9be480401ecba9d42027afce68f450c4605195e026dcfd985eb1ac333cd5da4ccdd190a22c8db417301e7ffef1d698a865a1625fe01000300feffffff02a0860100000000001976a914088ad75578a12715fb5dd7034d493831950d64c888ac84d03403000000001976a914274bfbf0e6e9071dd00bb515ef07139d3e62c52988acb3381400");
-
-                //Debug.WriteLine(tx);
-
-                //QBitNinjaClient client = new QBitNinjaClient(Network.TestNet);
-
-                //for(int i=0; i<tx.Outputs.Count; i++)
-                //{
-                //    var script = tx.Outputs[i].ScriptPubKey;
-                //     var address = script.GetDestinationAddress(Network.TestNet);
-                //}
-
-                //for(int i=0; i<tx.Inputs.Count; i++)
-                //{
-                //    QBitNinja.Client.Models.GetTransactionResponse transactionResponse = client.GetTransaction(tx.Inputs[i].PrevOut.Hash).Result;
-
-                //    var script = transactionResponse.Transaction.Outputs[tx.Inputs[i].PrevOut.N].ScriptPubKey;
-                //    var address = script.GetDestinationAddress(Network.TestNet);
-
-
-                //    Debug.WriteLine(transactionResponse);
-                //}
-
-
+                                await PopupNavigation.PushAsync(new TransactionPopup(parsedTransaction));
+                            }
+                            catch (TransactionNotActiveException)
+                            {
+                                throw new RemoteProtocolException("There are no transactions active");
+                            }
+                        }
+                    }
+                }
             }
             catch (RemoteProtocolException e)
             {
                 await DisplayAlert("Error", e.Message, "OK");
             }
-            catch(Exception e)
+            catch (ServerConnectionFailedException e)
             {
+                await DisplayAlert("Error", "Failed to connect.", "OK");
+            }
+            catch (EthParserException e)
+            {
+                await DisplayAlert("Error", e.Message, "OK");
+            }
+            catch (BtcParserException e)
+            {
+                await DisplayAlert("Error", e.Message, "OK");
+            }
+            catch (Exception e)
+            {
+                string message = "An error has occured";
+                while (e.InnerException != null)
+                {
+                    if(e.InnerException.GetType() == typeof(InvalidServerCertificateException) )
+                    {
+                        message = "This app is binded with a different Secalot device.";
+                        break;
+                    }
+
+                    e = e.InnerException;
+                }
+
+                await DisplayAlert("Error", message, "OK");
             }
         }
 
