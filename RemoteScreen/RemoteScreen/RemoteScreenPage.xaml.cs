@@ -34,16 +34,16 @@ namespace RemoteScreen
             }
         }
 
-        string serverStatusImage;
+        string serverColor;
 
-        public string ServerStatusImage
+        public string ServerColor
         {
-            get { return serverStatusImage; }
+            get { return serverColor; }
             set
             {
-                if (serverStatusImage != value)
+                if (serverColor != value)
                 {
-                    serverStatusImage = value;
+                    serverColor = value;
                     OnPropertyChanged();
                 }
             }
@@ -75,7 +75,7 @@ namespace RemoteScreen
             BindingContext = this;
 
             ServerStatus = "Searching for Secalot Control Panel";
-            ServerStatusImage = "yellowCircle.png";
+            ServerColor = "lightYellow";
             TransactionButtonEnabled = false;
 
             findServerTokenSource = new CancellationTokenSource();
@@ -104,7 +104,7 @@ namespace RemoteScreen
                     catch (Exception e)
                     {
                         ServerStatus = "Searching for Secalot Control Panel";
-                        ServerStatusImage = "yellowCircle.png";
+                        ServerColor = "lightYellow";
                         TransactionButtonEnabled = false;
 
                         await Task.Delay(5000, token);
@@ -113,7 +113,7 @@ namespace RemoteScreen
                     }
 
                     ServerStatus = "Secalot Control Panel found";
-                    ServerStatusImage = "greenCircle.png";
+                    ServerColor = "lightGreen";
                     TransactionButtonEnabled = true;
                     this.serverInfo = serverInfo;
 
