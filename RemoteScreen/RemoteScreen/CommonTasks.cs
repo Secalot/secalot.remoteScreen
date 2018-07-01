@@ -272,6 +272,9 @@ namespace RemoteScreen
             {
                 try
                 {
+#if __ANDROID__
+                    RemoteScreen.Droid.MainActivity.mlock.Acquire();
+#endif
                     await ZeroconfResolver.ResolveAsync("_secalot._tcp.local.", scanTime: timeout, retries: 1, callback: dev =>
                     {
                         if (dev.DisplayName == guid)
@@ -292,6 +295,12 @@ namespace RemoteScreen
                         token.ThrowIfCancellationRequested();
                     }
                 }
+#if __ANDROID__
+                finally
+                {
+                    RemoteScreen.Droid.MainActivity.mlock.Release();
+                }
+#endif
             }
 
             if (server != null)

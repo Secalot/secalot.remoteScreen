@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 using Foundation;
+using Plugin.HtmlLabel.iOS;
 using UIKit;
 
 namespace RemoteScreen.iOS
@@ -22,6 +23,9 @@ namespace RemoteScreen.iOS
         //
         public override bool FinishedLaunching(UIApplication app, NSDictionary options)
         {
+            ZXing.Net.Mobile.Forms.iOS.Platform.Init();
+            HtmlLabelRenderer.Initialize();
+
             global::Xamarin.Forms.Forms.Init();
             LoadApplication(new App());
 

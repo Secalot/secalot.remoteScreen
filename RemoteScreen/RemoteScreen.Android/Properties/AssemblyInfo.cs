@@ -11,7 +11,7 @@ using Android.App;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Matvey Mukha")]
 [assembly: AssemblyProduct("Secalot.RemoteScreen.Android")]
-[assembly: AssemblyCopyright("Copyright ©  2018 Matvey Mukha")]
+[assembly: AssemblyCopyright("Copyright © 2018 Matvey Mukha")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 [assembly: ComVisible(false)]

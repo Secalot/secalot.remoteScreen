@@ -95,7 +95,7 @@ namespace RemoteScreen
                 {
                     try
                     {
-                        serverInfo = await CommonTasks.FindServerAsync(TimeSpan.FromSeconds(1), token);
+                        serverInfo = await CommonTasks.FindServerAsync(TimeSpan.FromSeconds(5), token);
                     }
                     catch (OperationCanceledException)
                     {
