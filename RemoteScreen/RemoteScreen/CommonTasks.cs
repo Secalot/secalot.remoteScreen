@@ -356,9 +356,15 @@ namespace RemoteScreen
             Settings.GetPskKey(out keyAsString);
             byte[] key = keyAsString.ConvertHexStringToByteArray();
 
+            byte[] random = new byte[128];
+            var rngProvider = new System.Security.Cryptography.RNGCryptoServiceProvider();
+            rngProvider.GetBytes(random);
+            var secureRandomInstance = SecureRandom.GetInstance("SHA256PRNG");
+            secureRandomInstance.SetSeed(random);
+
             var identity = new BasicTlsPskIdentity(Encoding.ASCII.GetBytes("RemoteScreen"), key);
 
-            TlsClientProtocol pskClientProtocol = new TlsClientProtocol(SecureRandom.GetInstance("SHA256PRNG"));
+            TlsClientProtocol pskClientProtocol = new TlsClientProtocol(secureRandomInstance);
 
             var pskClient = new MyPskTlsClient(identity);
 
@@ -567,7 +573,13 @@ namespace RemoteScreen
 
         public async static Task<TlsClientProtocol> PerformSSLHadshakeWithToken(ConnectionState connectionState, CancellationToken token)
         {
-            TlsClientProtocol pkiClientProtocol = new TlsClientProtocol(SecureRandom.GetInstance("SHA256PRNG"));
+            byte[] random = new byte[128];
+            var rngProvider = new System.Security.Cryptography.RNGCryptoServiceProvider();
+            rngProvider.GetBytes(random);
+            var secureRandomInstance = SecureRandom.GetInstance("SHA256PRNG");
+            secureRandomInstance.SetSeed(random);
+
+            TlsClientProtocol pkiClientProtocol = new TlsClientProtocol(secureRandomInstance);
 
             MyPKITlsClient pkiClient = new MyPKITlsClient();
 
