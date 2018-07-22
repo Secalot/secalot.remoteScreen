@@ -32,21 +32,12 @@ namespace RemoteScreen
             Int64 totalInputAmount = 0;
             Int64 totalOutputAmount = 0;
 
-            string debugString  = "0x" + string.Join(string.Empty, Array.ConvertAll(transaction, b => b.ToString("x2")));
-
-            Debug.WriteLine(debugString);
-
-
-
-
             if (info.transactionTooBigToDisplay == true)
             {
                 throw new BtcParserException("Transaction too big to display.");
             }
 
             Transaction tx = new Transaction(BitConverter.ToString(transaction).Replace("-", ""));
-
-            Debug.Write(tx);
 
             if (tx.Inputs.Count != inputAmounts.Length)
             {
