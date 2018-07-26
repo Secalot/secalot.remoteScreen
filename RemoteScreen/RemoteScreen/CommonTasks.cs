@@ -130,12 +130,12 @@ namespace RemoteScreen
 
     }
 
-    class MyPskTlsClient: PskTlsClient
+    class MySrpTlsClient: SrpTlsClient
     {
         public bool handshakeFinished = false;
 
-        public MyPskTlsClient(TlsPskIdentity pskIdentity)
-            : base(pskIdentity)
+        public MySrpTlsClient(byte[] identity, byte[] password)
+            : base(identity, password)
         {}
 
         public override void NotifyHandshakeComplete()
@@ -145,16 +145,11 @@ namespace RemoteScreen
             handshakeFinished = true;
         }
 
-        public override ProtocolVersion ClientVersion
-        {
-            get { return ProtocolVersion.TLSv11; }
-        }
-
         public override int[] GetCipherSuites()
         {
             return new int[]
             {
-                CipherSuite.TLS_PSK_WITH_AES_256_CBC_SHA
+                CipherSuite.TLS_SRP_SHA_WITH_AES_256_CBC_SHA
             };
         }
     }
@@ -318,12 +313,12 @@ namespace RemoteScreen
         public class ConnectionState
         {
             public TcpClient client;
-            public TlsClientProtocol pskClientProtocol;
+            public TlsClientProtocol srpClientProtocol;
 
             public ConnectionState()
             {
                 client = null;
-                pskClientProtocol = null;
+                srpClientProtocol = null;
             }
         }
 
@@ -350,10 +345,10 @@ namespace RemoteScreen
             connectionState.client.Close();
         }
 
-        public async static Task EstablishPSKChannelAsync(ConnectionState connectionState, CancellationToken token)
+        public async static Task EstablishSRPChannelAsync(ConnectionState connectionState, CancellationToken token)
         {
             string keyAsString;
-            Settings.GetPskKey(out keyAsString);
+            Settings.GetSrpKey(out keyAsString);
             byte[] key = keyAsString.ConvertHexStringToByteArray();
 
             byte[] random = new byte[128];
@@ -362,27 +357,25 @@ namespace RemoteScreen
             var secureRandomInstance = SecureRandom.GetInstance("SHA256PRNG");
             secureRandomInstance.SetSeed(random);
 
-            var identity = new BasicTlsPskIdentity(Encoding.ASCII.GetBytes("RemoteScreen"), key);
+            TlsClientProtocol srpClientProtocol = new TlsClientProtocol(secureRandomInstance);
 
-            TlsClientProtocol pskClientProtocol = new TlsClientProtocol(secureRandomInstance);
+            var srpClient = new MySrpTlsClient(Encoding.ASCII.GetBytes("user"), key);
 
-            var pskClient = new MyPskTlsClient(identity);
-
-            pskClientProtocol.Connect(pskClient);
+            srpClientProtocol.Connect(srpClient);
 
             var stream = connectionState.client.GetStream();
 
             byte[] inputBuffer = new byte[4096];
 
-            while (pskClient.handshakeFinished != true)
+            while (srpClient.handshakeFinished != true)
             {
-                int dataAvailable = pskClientProtocol.GetAvailableOutputBytes();
+                int dataAvailable = srpClientProtocol.GetAvailableOutputBytes();
 
                 if (dataAvailable != 0)
                 {
                     byte[] data = new byte[dataAvailable];
 
-                    pskClientProtocol.ReadOutput(data, 0, dataAvailable);
+                    srpClientProtocol.ReadOutput(data, 0, dataAvailable);
 
                     await stream.WriteAsync(data, 0, dataAvailable, token);
                 }
@@ -394,11 +387,11 @@ namespace RemoteScreen
                     byte[] truncatedInputBuffer = new byte[bytesReceived];
                     Array.Copy(inputBuffer, 0, truncatedInputBuffer, 0, bytesReceived);
 
-                    pskClientProtocol.OfferInput(truncatedInputBuffer);
+                    srpClientProtocol.OfferInput(truncatedInputBuffer);
                 }
             }
 
-            connectionState.pskClientProtocol = pskClientProtocol;
+            connectionState.srpClientProtocol = srpClientProtocol;
 
         }
 
@@ -411,10 +404,10 @@ namespace RemoteScreen
 
             byte[] jsonArray = Encoding.ASCII.GetBytes(jsonString + '\n');
 
-            connectionState.pskClientProtocol.OfferOutput(jsonArray, 0, jsonArray.Length);
-            dataAvailable = connectionState.pskClientProtocol.GetAvailableOutputBytes();
+            connectionState.srpClientProtocol.OfferOutput(jsonArray, 0, jsonArray.Length);
+            dataAvailable = connectionState.srpClientProtocol.GetAvailableOutputBytes();
             byte[] wrappedData = new byte[dataAvailable];
-            connectionState.pskClientProtocol.ReadOutput(wrappedData, 0, wrappedData.Length);
+            connectionState.srpClientProtocol.ReadOutput(wrappedData, 0, wrappedData.Length);
 
             var stream = connectionState.client.GetStream();
 
@@ -435,10 +428,10 @@ namespace RemoteScreen
                 {
                     byte[] truncatedInputBuffer = new byte[bytesReceived];
                     Array.Copy(inputBuffer, 0, truncatedInputBuffer, 0, bytesReceived);
-                    connectionState.pskClientProtocol.OfferInput(truncatedInputBuffer);
-                    dataAvailable = connectionState.pskClientProtocol.GetAvailableInputBytes();
+                    connectionState.srpClientProtocol.OfferInput(truncatedInputBuffer);
+                    dataAvailable = connectionState.srpClientProtocol.GetAvailableInputBytes();
                     byte[] unwrappedChunk = new byte[dataAvailable];
-                    connectionState.pskClientProtocol.ReadInput(unwrappedChunk, 0, unwrappedChunk.Length);
+                    connectionState.srpClientProtocol.ReadInput(unwrappedChunk, 0, unwrappedChunk.Length);
 
                     if (unwrappedChunk[unwrappedChunk.Length - 1] == '\n')
                     {

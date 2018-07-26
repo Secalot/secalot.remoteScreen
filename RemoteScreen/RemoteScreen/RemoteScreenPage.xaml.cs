@@ -169,7 +169,7 @@ namespace RemoteScreen
                     {
                         await CommonTasks.ConnectToServerAsync(serverInfo, connectionState, TimeSpan.FromSeconds(1));
 
-                        await CommonTasks.EstablishPSKChannelAsync(connectionState, linkedCts.Token);
+                        await CommonTasks.EstablishSRPChannelAsync(connectionState, linkedCts.Token);
 
                         var tls = await CommonTasks.PerformSSLHadshakeWithToken(connectionState, linkedCts.Token);
 
@@ -225,7 +225,7 @@ namespace RemoteScreen
             }
             catch (Exception e)
             {
-                string message = "An error has occured";
+                string message = "An error has occurred";
                 while (e.InnerException != null)
                 {
                     if(e.InnerException.GetType() == typeof(InvalidServerCertificateException) )

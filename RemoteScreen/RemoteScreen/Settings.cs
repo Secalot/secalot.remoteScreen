@@ -40,7 +40,7 @@ namespace RemoteScreen
             JObject jsonQR = JObject.Parse(qrCode);
 
             string guid = (string)jsonQR["guid"];
-            string pskKey = (string)jsonQR["pskKey"];
+            string srpKey = (string)jsonQR["srpKey"];
             string publicKey = (string)jsonQR["publicKey"];
 
             Application.Current.Properties["guid"] = guid;
@@ -51,7 +51,7 @@ namespace RemoteScreen
                 Username = "Secalot RemoteScreen"
             };
 
-            account.Properties.Add("pskKey", pskKey);
+            account.Properties.Add("srpKey", srpKey);
             AccountStore.Create().Save(account, "Secalot RemoteScreen");
 
             Application.Current.Properties["controlPanelBinded"] = true;
@@ -80,11 +80,11 @@ namespace RemoteScreen
             publicKey = (string)Application.Current.Properties["publicKey"];
         }
 
-        public static void GetPskKey(out string key)
+        public static void GetSrpKey(out string key)
         {
             var account = AccountStore.Create().FindAccountsForService("Secalot RemoteScreen").FirstOrDefault();
 
-            key = account.Properties["pskKey"];
+            key = account.Properties["srpKey"];
         }
 
         public static string PublicKeyToFingerprint(string key)
