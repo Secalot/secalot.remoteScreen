@@ -14,17 +14,17 @@ namespace RemoteScreen
     class Settings
     {
 
-        public static bool IsControlPanelBinded()
+        public static bool IsControlPanelBound()
         {
-            if (Application.Current.Properties.ContainsKey("controlPanelBinded") == false)
+            if (Application.Current.Properties.ContainsKey("controlPanelBound") == false)
             {
                 return false;
             }
             else
             {
-                var controlPanelBinded = (bool)Application.Current.Properties["controlPanelBinded"];
+                var controlPanelBound = (bool)Application.Current.Properties["controlPanelBound"];
 
-                if(controlPanelBinded == true)
+                if(controlPanelBound == true)
                 {
                     return true;
                 }
@@ -54,13 +54,13 @@ namespace RemoteScreen
             account.Properties.Add("srpKey", srpKey);
             AccountStore.Create().Save(account, "Secalot RemoteScreen");
 
-            Application.Current.Properties["controlPanelBinded"] = true;
+            Application.Current.Properties["controlPanelBound"] = true;
         }
 
         public static void UnbindControlPanel()
         {
 
-            Application.Current.Properties["controlPanelBinded"] = false;
+            Application.Current.Properties["controlPanelBound"] = false;
             Application.Current.Properties["guid"] = "";
 
             var account = AccountStore.Create().FindAccountsForService("Secalot RemoteScreen").FirstOrDefault();

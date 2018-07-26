@@ -13,9 +13,9 @@ namespace RemoteScreen
 		{
 			InitializeComponent();
 
-            bool isBinded = Settings.IsControlPanelBinded();
+            bool isBound = Settings.IsControlPanelBound();
 
-            if(isBinded == true)
+            if(isBound == true)
             {
                 MainPage = new NavigationPage(new RemoteScreenPage());
             }

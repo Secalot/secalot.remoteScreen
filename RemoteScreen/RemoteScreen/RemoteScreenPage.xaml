@@ -24,7 +24,8 @@
 
             <StackLayout 
                 RelativeLayout.WidthConstraint= "{ConstraintExpression Type=RelativeToParent, Property=Width}"
-                RelativeLayout.HeightConstraint= "{ConstraintExpression Type=RelativeToParent, Property=Height}">
+                RelativeLayout.HeightConstraint= "{ConstraintExpression Type=RelativeToParent, Property=Height}"
+                IsEnabled="{Binding MainLayoutEnabled}">
 
                 <StackLayout HorizontalOptions="FillAndExpand" Padding="0, 10, 0, 10" BackgroundColor="{Binding ServerColor}}">
                     <Label Text="{Binding ServerStatus}" VerticalTextAlignment="Center" HorizontalOptions="CenterAndExpand" />

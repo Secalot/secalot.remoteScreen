@@ -45,7 +45,7 @@ namespace RemoteScreen
 
                     string fingerprint = Settings.PublicKeyToFingerprint(publicKey);
 
-                    await DisplayAlert("Device binded", "Device with fingerprint " + fingerprint + " is successfully binded.", "OK");
+                    await DisplayAlert("Device bound", "Device with fingerprint " + fingerprint + " is successfully bound.", "OK");
 
                     Navigation.InsertPageBefore(new RemoteScreenPage(), this);
                     await Navigation.PopAsync(true);

@@ -64,6 +64,21 @@ namespace RemoteScreen
             }
         }
 
+        bool mainLayoutEnabled;
+
+        public bool MainLayoutEnabled
+        {
+            get { return mainLayoutEnabled; }
+            set
+            {
+                if (mainLayoutEnabled != value)
+                {
+                    mainLayoutEnabled = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         CancellationTokenSource findServerTokenSource;
         CancellationTokenSource getTransactionTokenSource;
 
@@ -77,6 +92,7 @@ namespace RemoteScreen
             ServerStatus = "Searching for Secalot Control Panel";
             ServerColor = "lightYellow";
             TransactionButtonEnabled = false;
+            MainLayoutEnabled = true;
 
             findServerTokenSource = new CancellationTokenSource();
             getTransactionTokenSource = new CancellationTokenSource();
@@ -164,6 +180,8 @@ namespace RemoteScreen
 
         async void OnGetTransactionButtonClicked(object sender, EventArgs args)
         {
+            MainLayoutEnabled = false;
+
             try
             {
                 CancellationTokenSource timeoutCTS = new CancellationTokenSource(TimeSpan.FromSeconds(5));
@@ -237,7 +255,7 @@ namespace RemoteScreen
                 {
                     if(e.InnerException.GetType() == typeof(InvalidServerCertificateException) )
                     {
-                        message = "This app is binded with a different Secalot device.";
+                        message = "This app is bound with a different Secalot device.";
                         break;
                     }
 
@@ -245,6 +263,10 @@ namespace RemoteScreen
                 }
 
                 await DisplayAlert("Error", message, "OK");
+            }
+            finally
+            {
+                MainLayoutEnabled = true;
             }
         }
 
