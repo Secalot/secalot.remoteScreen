@@ -87,15 +87,15 @@ namespace RemoteScreen
         private async Task FindServer(CancellationToken token)
         {
             CommonTasks.ServerInfo serverInfo;
+            int failedAttempts = 0;
 
             try
             {
-
                 while (true)
                 {
                     try
                     {
-                        serverInfo = await CommonTasks.FindServerAsync(TimeSpan.FromSeconds(5), token);
+                        serverInfo = await CommonTasks.FindServerAsync(TimeSpan.FromSeconds(1), token);
                     }
                     catch (OperationCanceledException)
                     {
@@ -103,11 +103,17 @@ namespace RemoteScreen
                     }
                     catch (Exception e)
                     {
-                        ServerStatus = "Searching for Secalot Control Panel";
-                        ServerColor = "lightYellow";
-                        TransactionButtonEnabled = false;
+                        failedAttempts++;
 
-                        await Task.Delay(5000, token);
+                        if(failedAttempts == 5)
+                        {
+                            ServerStatus = "Searching for Secalot Control Panel";
+                            ServerColor = "lightYellow";
+                            TransactionButtonEnabled = false;
+                            failedAttempts = 0;
+
+                            await Task.Delay(5000, token);
+                        }
 
                         continue;
                     }
@@ -116,6 +122,7 @@ namespace RemoteScreen
                     ServerColor = "lightGreen";
                     TransactionButtonEnabled = true;
                     this.serverInfo = serverInfo;
+                    failedAttempts = 0;
 
                     await Task.Delay(5000, token);
                 }
