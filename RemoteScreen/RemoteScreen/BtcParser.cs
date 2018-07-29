@@ -1,4 +1,13 @@
-﻿using System;
+﻿/*
+ * Secalot RemoteScreen.
+ * Copyright (c) 2018 Matvey Mukha <matvey.mukha@gmail.com>
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
@@ -63,7 +72,7 @@ namespace RemoteScreen
             for (int i = 0; i < tx.Outputs.Count; i++)
             {
                 var script = tx.Outputs[i].ScriptPubKey;
-                var address = script.GetDestinationAddress(Network.TestNet);
+                var address = script.GetDestinationAddress(Network.Main);
 
                 htmlOutput += "Address: " + address + "<br>" + "Amount: " + tx.Outputs[i].Value.ToString() + "<br><br>";
 
