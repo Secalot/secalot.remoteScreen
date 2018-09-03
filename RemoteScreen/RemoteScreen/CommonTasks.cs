@@ -81,6 +81,13 @@ namespace RemoteScreen
         }
     }
 
+    public class AppNotPresentException : Exception
+    {
+        public AppNotPresentException()
+        {
+        }
+    }
+
 
     static class Helper
     {
@@ -233,6 +240,13 @@ namespace RemoteScreen
         public bool transactionTooBigToDisplay { get; set; }
         public ushort currentOffset { get; set; }
         public uint numberOfInputs { get; set; }
+        public uint remainingTime { get; set; }
+    }
+
+    public class RippleTransactionInfo
+    {
+        public bool transactionTooBigToDisplay { get; set; }
+        public ushort currentOffset { get; set; }
         public uint remainingTime { get; set; }
     }
 
@@ -860,6 +874,91 @@ namespace RemoteScreen
             }
 
             return amounts;
+        }
+
+        public async static Task SelectXrpApp(ConnectionState connectionState, CancellationToken token, TlsClientProtocol tls)
+        {
+            byte[] apdu = { 0x00, 0xA4, 0x04, 0x00, 0x09, 0x58, 0x52, 0x50, 0x41, 0x50, 0x50, 0x4C, 0x45, 0x54 };
+
+            try
+            {
+                await SendWrappedAPDU(apdu, 0, connectionState, token, tls);
+            }
+            catch (Non9000SwException)
+            {
+                throw new AppNotPresentException();
+            }
+        }
+
+        public async static Task<RippleTransactionInfo> GetXrpTransactionDetails(ConnectionState connectionState, CancellationToken token, TlsClientProtocol tls)
+        {
+            byte[] apdu = { 0x80, 0xE0, 0x00, 0x00 };
+            byte[] response;
+
+            try
+            {
+                response = await SendWrappedAPDU(apdu, 7, connectionState, token, tls);
+            }
+            catch (Non9000SwException)
+            {
+                throw new TransactionNotActiveException();
+            }
+
+            RippleTransactionInfo transactionInfo = new RippleTransactionInfo();
+
+            if (response[0] != 0x00)
+            {
+                transactionInfo.transactionTooBigToDisplay = true;
+            }
+            else
+            {
+                transactionInfo.transactionTooBigToDisplay = false;
+            }
+
+            transactionInfo.currentOffset = Helper.MakeUint16(response, 1);
+            transactionInfo.remainingTime = Helper.MakeUint32(response, 3);
+
+            return transactionInfo;
+        }
+
+        public async static Task<byte[]> ReadXrpTransaction(uint length, ConnectionState connectionState, CancellationToken token, TlsClientProtocol tls)
+        {
+            List<byte> apdu = new List<byte>();
+            byte[] header = { 0x80, 0xE0, 0x01, 0x00 };
+            byte[] response;
+            uint chunksToRead;
+            uint chunkSize = 128;
+            uint remainingLength = length;
+            List<byte> transaction = new List<byte>();
+
+            chunksToRead = length / chunkSize;
+
+            if ((length % chunkSize) != 0)
+            {
+                chunksToRead++;
+            }
+
+            for (int i = 0; i < chunksToRead; i++)
+            {
+                apdu.Clear();
+                apdu.AddRange(header);
+                apdu.Add(0x02);
+                apdu.Add((byte)(i >> 8));
+                apdu.Add((byte)i);
+
+                response = await SendWrappedAPDU(apdu.ToArray(), chunkSize, connectionState, token, tls);
+
+                if (remainingLength < chunkSize)
+                {
+                    response = response.Take((int)remainingLength).ToArray();
+                }
+
+                transaction.AddRange(response);
+
+                remainingLength -= chunkSize;
+            }
+
+            return transaction.ToArray();
         }
 
     }

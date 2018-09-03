@@ -19,29 +19,40 @@ namespace RemoteScreen
     [XamlCompilation(XamlCompilationOptions.Compile)]
     public partial class TransactionPopup : PopupPage
     {
-        string transactionString;
+        private string transactionWithDetails;
 
-        public string TransactionString
-        {
-            get { return transactionString; }
-            set
-            {
-                if (transactionString != value)
-                {
-                    transactionString = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-
-        public TransactionPopup(string transaction)
+        public TransactionPopup(string transaction, string transactionWithDetails = null)
         {
             BindingContext = this;
 
             InitializeComponent();
 
-            TransactionString = transaction;
+            transaction = transaction.Replace(' ', '\u00A0');
+            transaction = transaction.Replace("\t", "&emsp;");
+
+            TransactionLabel.Text = transaction;
+
+            if(transactionWithDetails != null)
+            {
+                transactionWithDetails = transactionWithDetails.Replace(' ', '\u00A0');
+                transactionWithDetails = transactionWithDetails.Replace("\t", "&nbsp;&nbsp;");
+                TransactionDetailsButton.IsVisible = true;
+                this.transactionWithDetails = transactionWithDetails;
+            }
+            else
+            {
+                TransactionDetailsButton.IsVisible = false;
+            }
         }
+
+        async void OnTransactionDetailsButtonClicked(object sender, EventArgs args)
+        {
+            await PopupNavigation.PopAsync();
+            TransactionLabel.Text = transactionWithDetails;
+            TransactionDetailsButton.IsVisible = false;
+            await PopupNavigation.PushAsync(this);
+        }
+
 
         async void OnCloseButtonClicked(object sender, EventArgs args)
         {
@@ -50,3 +61,4 @@ namespace RemoteScreen
 
     }
 }
+

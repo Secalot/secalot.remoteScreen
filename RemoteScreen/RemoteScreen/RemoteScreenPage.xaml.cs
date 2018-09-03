@@ -235,7 +235,33 @@ namespace RemoteScreen
                             }
                             catch (TransactionNotActiveException)
                             {
-                                throw new RemoteProtocolException("There are no transactions active");
+                                try
+                                {
+                                    await CommonTasks.SelectXrpApp(connectionState, linkedCts.Token, tls);
+
+                                    var transactionDetails = await CommonTasks.GetXrpTransactionDetails(connectionState, linkedCts.Token, tls);
+
+                                    var transaction = await CommonTasks.ReadXrpTransaction(transactionDetails.currentOffset, connectionState, linkedCts.Token, tls);
+
+                                    List<string> parsedTransaction = XrpParser.ParseRippleTransaction(transactionDetails, transaction);
+
+                                    if (parsedTransaction.Count == 1)
+                                    {
+                                        await PopupNavigation.PushAsync(new TransactionPopup(parsedTransaction[0]));
+                                    }
+                                    else
+                                    {
+                                        await PopupNavigation.PushAsync(new TransactionPopup(parsedTransaction[0], parsedTransaction[1]));
+                                    }
+                                }
+                                catch (TransactionNotActiveException)
+                                {
+                                    throw new RemoteProtocolException("There are no transactions active");
+                                }
+                                catch (AppNotPresentException)
+                                {
+                                    throw new RemoteProtocolException("There are no transactions active");
+                                }
                             }
                         }
                     }
@@ -254,6 +280,10 @@ namespace RemoteScreen
                 await DisplayAlert("Error", e.Message, "OK");
             }
             catch (BtcParserException e)
+            {
+                await DisplayAlert("Error", e.Message, "OK");
+            }
+            catch (XrpParserException e)
             {
                 await DisplayAlert("Error", e.Message, "OK");
             }
