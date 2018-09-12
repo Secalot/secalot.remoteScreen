@@ -84,7 +84,7 @@ namespace RemoteScreen
 
                 string gasPrice = "";
                 var gasPriceInGwei = new BigInteger(collection[1].RLPData).DivideAndRemainder(new BigInteger("1000000000"));
-                var gasPriceInGweiRemainder = gasPriceInGwei[1].ToString(10).TrimEnd('0');
+                var gasPriceInGweiRemainder = gasPriceInGwei[1].ToString(10).PadLeft(9, '0').TrimEnd('0');
 
                 if (gasPriceInGweiRemainder == "")
                 {
@@ -100,7 +100,7 @@ namespace RemoteScreen
 
                 string value = "";
                 var valueInEth = new BigInteger(collection[4].RLPData).DivideAndRemainder(new BigInteger("1000000000000000000"));
-                var valueInEthRemainder = valueInEth[1].ToString(10).TrimEnd('0');
+                var valueInEthRemainder = valueInEth[1].ToString(10).PadLeft(18, '0').TrimEnd('0');
 
                 if(valueInEthRemainder == "")
                 {
