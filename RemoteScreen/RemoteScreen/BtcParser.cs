@@ -35,7 +35,7 @@ namespace RemoteScreen
 
     class BtcParser
     {
-        public static string ParseBitcoinTransaction(BitcoinTransactionInfo info, byte[] transaction, Int64[] inputAmounts)
+        public static string ParseBitcoinTransaction(BitcoinTransactionInfo info, byte[] transaction, Int64[] inputAmounts, ref uint timeout)
         {
             string htmlOutput = "";
             Int64 totalInputAmount = 0;
@@ -82,9 +82,9 @@ namespace RemoteScreen
             Int64 fee = totalInputAmount - totalOutputAmount;
 
             htmlOutput += "<b>Fee:</b><br>";
-            htmlOutput += new Money(fee).ToString() + "<br><br>";
+            htmlOutput += new Money(fee).ToString();
 
-            htmlOutput += "Time remaining to confirm: <b>" + (info.remainingTime / 1000).ToString() + "</b> seconds. <br><br>";
+            timeout = info.remainingTime / 1000;
 
             return htmlOutput;
         }

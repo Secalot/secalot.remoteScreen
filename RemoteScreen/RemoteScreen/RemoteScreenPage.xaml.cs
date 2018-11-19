@@ -189,6 +189,8 @@ namespace RemoteScreen
 
         async void OnGetTransactionButtonClicked(object sender, EventArgs args)
         {
+            uint timeout = 0;
+
             MainLayoutEnabled = false;
 
             try
@@ -215,9 +217,9 @@ namespace RemoteScreen
                             var inputAmounts = await CommonTasks.GetBtcInputAmounts(transactionDetails.numberOfInputs, connectionState, linkedCts.Token, tls);
                             var transaction = await CommonTasks.ReadBtcTransaction(transactionDetails.currentOffset, connectionState, linkedCts.Token, tls);
 
-                            var parsedTransaction = BtcParser.ParseBitcoinTransaction(transactionDetails, transaction, inputAmounts);
+                            var parsedTransaction = BtcParser.ParseBitcoinTransaction(transactionDetails, transaction, inputAmounts, ref timeout);
 
-                            await PopupNavigation.PushAsync(new TransactionPopup(parsedTransaction));
+                            await PopupNavigation.PushAsync(new TransactionPopup(parsedTransaction, timeout));
                         }
                         catch (TransactionNotActiveException)
                         {
@@ -229,9 +231,9 @@ namespace RemoteScreen
 
                                 var transaction = await CommonTasks.ReadEthTransaction(transactionDetails.currentOffset, connectionState, linkedCts.Token, tls);
 
-                                string parsedTransaction = EthParser.ParseEthereumTransaction(transactionDetails, transaction);
+                                string parsedTransaction = EthParser.ParseEthereumTransaction(transactionDetails, transaction, ref timeout);
 
-                                await PopupNavigation.PushAsync(new TransactionPopup(parsedTransaction));
+                                await PopupNavigation.PushAsync(new TransactionPopup(parsedTransaction, timeout));
                             }
                             catch (TransactionNotActiveException)
                             {
@@ -243,16 +245,9 @@ namespace RemoteScreen
 
                                     var transaction = await CommonTasks.ReadXrpTransaction(transactionDetails.currentOffset, connectionState, linkedCts.Token, tls);
 
-                                    List<string> parsedTransaction = XrpParser.ParseRippleTransaction(transactionDetails, transaction);
+                                    List<string> parsedTransaction = XrpParser.ParseRippleTransaction(transactionDetails, transaction, ref timeout);
 
-                                    if (parsedTransaction.Count == 1)
-                                    {
-                                        await PopupNavigation.PushAsync(new TransactionPopup(parsedTransaction[0]));
-                                    }
-                                    else
-                                    {
-                                        await PopupNavigation.PushAsync(new TransactionPopup(parsedTransaction[0], parsedTransaction[1]));
-                                    }
+                                    await PopupNavigation.PushAsync(new TransactionPopup(parsedTransaction[0], timeout, parsedTransaction[1]));
                                 }
                                 catch (TransactionNotActiveException)
                                 {

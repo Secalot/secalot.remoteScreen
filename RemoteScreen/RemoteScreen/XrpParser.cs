@@ -108,7 +108,7 @@ namespace RemoteScreen
             return retVal;
         }
 
-        public static List<string> ParseRippleTransaction(RippleTransactionInfo info, byte[] transaction)
+        public static List<string> ParseRippleTransaction(RippleTransactionInfo info, byte[] transaction, ref uint timeout)
         {
             string htmlOutput = "";
             string htmlOutputWithDetails = "";
@@ -121,64 +121,36 @@ namespace RemoteScreen
             string transactionString = BitConverter.ToString(transaction).Replace("-", "").ToLower();
 
             var tx = StObject.FromHex(transactionString);
-            JToken txJson = tx.ToJson();
+            JToken fullTxJson = tx.ToJson();
 
-            if (!(txJson is JObject))
+            if (!(fullTxJson is JObject))
             {
                 throw new XrpParserException("Invalid transaction.");
             }
 
-            var type = txJson["TransactionType"];
+            JToken mainFieldsJson = fullTxJson.DeepClone();
 
-            if ((type != null) && (type.ToString() == "Payment"))
+            foreach (JProperty element in fullTxJson.Children())
             {
-                JObject mainFields = new JObject();
+                string name = (element).Name;
 
-                foreach (JProperty element in txJson.Children())
+                if ((name.ToLower() == "maxledgerversion") || (name.ToLower() == "maxledgerversionoffset") ||
+                    (name.ToLower() == "flags") || (name.ToLower() == "sequence") || (name.ToLower() == "signingpubkey") ||
+                    (name.ToLower() == "account"))
                 {
-                    string name = (element).Name;
-
-                    if ((name == "Fee") || (name == "Amount") || (name == "Destination") || (name == "TransactionType"))
-                    {
-                        mainFields.Add(element);
-                    }
+                    ((JObject)mainFieldsJson).Property(name).Remove();
                 }
-
-                ((JObject)txJson).Property("Fee").Remove();
-                ((JObject)txJson).Property("Amount").Remove();
-                ((JObject)txJson).Property("Destination").Remove();
-                ((JObject)txJson).Property("TransactionType").Remove();
-
-                JObject sortedMainFields = new JObject();
-                sortedMainFields.Add(((JObject)mainFields).Property("TransactionType"));
-                sortedMainFields.Add(((JObject)mainFields).Property("Destination"));
-                sortedMainFields.Add(((JObject)mainFields).Property("Amount"));
-                sortedMainFields.Add(((JObject)mainFields).Property("Fee"));
-
-                htmlOutput += ParseElement(sortedMainFields, 0);
-
-                htmlOutputWithDetails += htmlOutput;
-                htmlOutputWithDetails += "<br>" + ParseElement((JContainer)txJson, 0);
-
-                htmlOutputWithDetails += "<br><br>";
-                htmlOutputWithDetails += "Time remaining to confirm: <b>" + (info.remainingTime / 1000).ToString() + "</b> seconds. <br><br>";
-            }
-            else
-            {
-                htmlOutput += ParseElement((JContainer)txJson, 0);
             }
 
-            htmlOutput += "<br><br>";
-            htmlOutput += "Time remaining to confirm: <b>" + (info.remainingTime / 1000).ToString() + "</b> seconds. <br><br>";
+            htmlOutput += ParseElement((JContainer)mainFieldsJson, 0);
+            htmlOutputWithDetails += ParseElement((JContainer)fullTxJson, 0);
 
             List<string> retVal = new List<string>();
 
             retVal.Add(htmlOutput);
+            retVal.Add(htmlOutputWithDetails);
 
-            if (htmlOutputWithDetails != "")
-            {
-                retVal.Add(htmlOutputWithDetails);
-            }
+            timeout = (info.remainingTime / 1000);
 
             return retVal;
         }

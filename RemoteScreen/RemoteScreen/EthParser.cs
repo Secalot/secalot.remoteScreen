@@ -34,7 +34,7 @@ namespace RemoteScreen
     class EthParser
     {
 
-        public static string ParseEthereumTransaction(EthereumTransactionInfo info, byte[] input)
+        public static string ParseEthereumTransaction(EthereumTransactionInfo info, byte[] input, ref uint timeout)
         {
             string htmlOutput = "";
             string details = "";
@@ -144,13 +144,13 @@ namespace RemoteScreen
                 details += "<b>Gas limit: </b>" + gasLimit + "<br>";
                 details += "<b>Gas price: </b>" + gasPrice + "<br>";
                 details += "<b>Nonce: </b>" + nonce + "<br>";
-                details += "<b>Data: </b>" + data + "<br><br>";
+                details += "<b>Data: </b>" + data;
                 
             }
 
             htmlOutput += details;
 
-            htmlOutput += "Time remaining to confirm: <b>" + (info.remainingTime / 1000).ToString() + "</b> seconds. <br><br>";
+            timeout = info.remainingTime / 1000;
 
             return htmlOutput;
         }

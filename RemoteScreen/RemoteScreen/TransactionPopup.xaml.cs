@@ -20,8 +20,9 @@ namespace RemoteScreen
     public partial class TransactionPopup : PopupPage
     {
         private string transactionWithDetails;
+        private bool cancelled = false;
 
-        public TransactionPopup(string transaction, string transactionWithDetails = null)
+        public TransactionPopup(string transaction, uint timeout, string transactionWithDetails = null)
         {
             BindingContext = this;
 
@@ -32,7 +33,9 @@ namespace RemoteScreen
 
             TransactionLabel.Text = transaction;
 
-            if(transactionWithDetails != null)
+
+
+            if (transactionWithDetails != null)
             {
                 transactionWithDetails = transactionWithDetails.Replace(' ', '\u00A0');
                 transactionWithDetails = transactionWithDetails.Replace("\t", "&nbsp;&nbsp;");
@@ -42,6 +45,37 @@ namespace RemoteScreen
             else
             {
                 TransactionDetailsButton.IsVisible = false;
+            }
+
+            if (timeout != 0)
+            {
+                TimeoutLabel.Text = "<br>Time remaining to confirm: <b>" + (timeout).ToString() + "</b> seconds. <br><br>";
+
+                Device.StartTimer(TimeSpan.FromSeconds(1), () =>
+                {
+                    bool retVal;
+
+                    timeout--;
+
+                    if (timeout != 0)
+                    {
+                        TimeoutLabel.Text = "<br>Time remaining to confirm: <b>" + (timeout).ToString() + "</b> seconds. <br><br>";
+
+                        retVal = !cancelled;
+                    }
+                    else
+                    {
+                        TimeoutLabel.Text = "<br><b>Confirmation time expired.</b><br><br>";
+
+                        retVal = false;
+                    }
+
+                    return retVal;
+                });
+            }
+            else
+            {
+                TimeoutLabel.Text = "<br><b>Confirmation time expired.</b><br><br>";
             }
         }
 
@@ -56,6 +90,7 @@ namespace RemoteScreen
 
         async void OnCloseButtonClicked(object sender, EventArgs args)
         {
+            cancelled = true;
             await PopupNavigation.PopAsync();
         }
 
