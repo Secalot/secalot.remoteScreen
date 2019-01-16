@@ -72,7 +72,7 @@ namespace RemoteScreen
             for (int i = 0; i < tx.Outputs.Count; i++)
             {
                 var script = tx.Outputs[i].ScriptPubKey;
-                var address = script.GetDestinationAddress(Network.Main);
+                var address = script.GetDestinationAddress(NBitcoin.Network.Main);
 
                 htmlOutput += "Address: " + address + "<br>" + "Amount: " + tx.Outputs[i].Value.ToString() + "<br><br>";
 
