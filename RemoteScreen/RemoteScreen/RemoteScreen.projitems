@@ -34,6 +34,7 @@
     </Compile>
     <Compile Include="$(MSBuildThisFileDirectory)TransactionPopup.xaml.cs">
       <DependentUpon>TransactionPopup.xaml</DependentUpon>
-    </Compile>    
+    </Compile>
+    <Compile Include="$(MSBuildThisFileDirectory)XrpParser.cs" />
   </ItemGroup>
 </Project>

@@ -34,7 +34,11 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
         <StackLayout BackgroundColor="White" Padding="20, 20, 20, 20">
             <htmlLabel:HtmlLabel Text="Transaction" HorizontalTextAlignment="Center" FontSize="Medium" FontAttributes="Bold"/>
             <ScrollView>
-                <htmlLabel:HtmlLabel Text="{Binding TransactionString}" FontSize="Default" />
+                <StackLayout>
+                    <htmlLabel:HtmlLabel x:Name="TransactionLabel" FontSize="Default" />
+                    <htmlLabel:HtmlLabel x:Name="TimeoutLabel" FontSize="Default" />
+                    <Button x:Name="TransactionDetailsButton" Text="Show more details" Clicked="OnTransactionDetailsButtonClicked" />
+                </StackLayout>
             </ScrollView>
             <Button Text="Got it" Clicked="OnCloseButtonClicked" />
         </StackLayout>
