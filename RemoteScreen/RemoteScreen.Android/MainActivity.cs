@@ -18,6 +18,8 @@ using Android.OS;
 using Android.Net.Wifi;
 using Android.Content;
 using Plugin.HtmlLabel.Android;
+using Plugin.CurrentActivity;
+using Plugin.Permissions;
 
 namespace RemoteScreen.Droid
 {
@@ -42,13 +44,16 @@ namespace RemoteScreen.Droid
 
             HtmlLabelRenderer.Initialize();
 
+            CrossCurrentActivity.Current.Init(this, bundle);
+
             global::Xamarin.Forms.Forms.Init(this, bundle);
             LoadApplication(new App());
         }
 
-        public override void OnRequestPermissionsResult(int requestCode, string[] permissions, Permission[] grantResults)
+        public override void OnRequestPermissionsResult(int requestCode, string[] permissions, [GeneratedEnum] Android.Content.PM.Permission[] grantResults)
         {
-            global::ZXing.Net.Mobile.Android.PermissionsHandler.OnRequestPermissionsResult(requestCode, permissions, grantResults);
+            PermissionsImplementation.Current.OnRequestPermissionsResult(requestCode, permissions, grantResults);
+            base.OnRequestPermissionsResult(requestCode, permissions, grantResults);
         }
     }
 }

@@ -19,6 +19,11 @@ using Xamarin.Forms.Xaml;
 using Rg.Plugins.Popup.Extensions;
 using Rg.Plugins.Popup.Services;
 
+#if __ANDROID__
+using Plugin.Permissions;
+using Plugin.Permissions.Abstractions;
+#endif
+
 namespace RemoteScreen
 {
     [XamlCompilation(XamlCompilationOptions.Compile)]
@@ -38,6 +43,25 @@ namespace RemoteScreen
         {
             try
             {
+
+#if __ANDROID__
+                var status = await CrossPermissions.Current.CheckPermissionStatusAsync(Permission.Camera);
+
+                if (status != PermissionStatus.Granted)
+                {
+                    var results = await CrossPermissions.Current.RequestPermissionsAsync(Permission.Camera);
+
+                    if (results.ContainsKey(Permission.Camera))
+                        status = results[Permission.Camera];
+                }
+
+                if (status != PermissionStatus.Granted)
+                {
+                    await DisplayAlert("Camera permission denied", "Please enable camera permission for this app.", "OK");
+                    return;
+                }
+#endif
+
                 string qrCode = await CommonTasks.GetQRCodeAsync();
 
                 if (qrCode == null)
