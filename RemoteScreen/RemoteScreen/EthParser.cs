@@ -80,7 +80,12 @@ namespace RemoteScreen
 
                 string fromAddress = "0x" + string.Join(string.Empty, Array.ConvertAll(info.address, b => b.ToString("x2")));
 
-                string nonce = new BigInteger(collection[0].RLPData).ToString(10);
+                string nonce = "0";
+
+                if(collection[0].RLPData != null)
+                {
+                    nonce = new BigInteger(collection[0].RLPData).ToString(10);
+                }
 
                 string gasPrice = "";
                 var gasPriceInGwei = new BigInteger(collection[1].RLPData).DivideAndRemainder(new BigInteger("1000000000"));
