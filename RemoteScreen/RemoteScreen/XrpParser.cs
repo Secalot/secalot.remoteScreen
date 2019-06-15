@@ -79,6 +79,44 @@ namespace RemoteScreen
                         {
                             retVal += " " + item.Value.ToString() + " drops<br>";
                         }
+                        else if ((item.Key == "MemoType") || (item.Key == "MemoFormat"))
+                        {
+                            byte[] byteArray = item.Value.ToString().ConvertHexStringToByteArray();
+                            string asciiString = System.Text.Encoding.ASCII.GetString(byteArray);
+
+                            retVal += " " + asciiString + "<br>";
+                        }
+                        else if (item.Key == "MemoData")
+                        {
+                            bool plainFormat = false;
+
+                            if (((JObject)element).ContainsKey("MemoFormat"))
+                            {
+                                JToken memoFormat = ((JObject)element).GetValue("MemoFormat");
+                                if (memoFormat is JValue)
+                                {
+                                    byte[] byteArray = memoFormat.ToString().ConvertHexStringToByteArray();
+                                    string asciiString = System.Text.Encoding.ASCII.GetString(byteArray);
+
+                                    if (asciiString == "plain/text")
+                                    {
+                                        plainFormat = true;
+                                    }
+                                }
+                            }
+
+                            if (plainFormat == true)
+                            {
+                                byte[] byteArray = item.Value.ToString().ConvertHexStringToByteArray();
+                                string asciiString = System.Text.Encoding.ASCII.GetString(byteArray);
+
+                                retVal += " " + asciiString + "<br>";
+                            }
+                            else
+                            {
+                                retVal += " " + item.Value.ToString() + "<br>";
+                            }
+                        }
                         else
                         {
                             retVal += " " + item.Value.ToString() + "<br>";

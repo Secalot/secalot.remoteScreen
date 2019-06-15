@@ -51,6 +51,7 @@ namespace RemoteScreen
             {
                 TimeoutLabel.Text = "<br>Time remaining to confirm: <b>" + (timeout).ToString() + "</b> seconds. <br><br>";
 
+#if __ANDROID__
                 Device.StartTimer(TimeSpan.FromSeconds(1), () =>
                 {
                     bool retVal;
@@ -72,6 +73,7 @@ namespace RemoteScreen
 
                     return retVal;
                 });
+#endif
             }
             else
             {
